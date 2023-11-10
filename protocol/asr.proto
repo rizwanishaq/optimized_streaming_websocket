@@ -1,0 +1,164 @@
+// The syntax for this file is proto3
+syntax = "proto3";
+
+package utopia.loquista.asr;  // version 2.0
+
+message Empty {}
+
+message SpeechContext {
+    repeated string phrases = 1;
+}
+
+enum AudioEncoding {
+    ENCODING_UNSPECIFIED = 0;
+    LINEAR16 = 1;
+    FLAC = 2;
+    MULAW = 3;
+    AMR = 4;
+    AMR_WB = 5;
+    OGG_OPUS = 6;
+    SPEEX_WITH_HEADER_BYTE = 7;
+}
+
+enum NLPEncoding {
+    NONE = 0;
+    GENERAL = 1;
+    CAR_PLATE = 2;
+    ID_CARD = 3;
+    DATE = 4;
+    TIME = 5;
+    EMAIL = 6;
+    ADDRESS = 7;
+    PHONE = 8;
+    CONFIRMATION = 9;
+    NUMBER_MENU = 10;
+    NUMBER = 11;
+    DIGIT = 12;
+}
+
+enum RequestType {
+    STREAMING = 0;
+    CANNED = 1;
+}
+
+message RecognitionConfig {
+    AudioEncoding encoding = 1;
+    int32 sample_rate_hertz = 2;
+    string language_code = 3;
+    int32 audio_channel_count = 7;
+    bool enable_separate_recognition_per_channel = 12;
+    int32 max_alternatives = 4;
+    bool profanity_filter = 5;
+    SpeechContext speech_contexts = 6;
+    bool enable_word_time_offsets = 8;
+    bool enable_automatic_punctuation = 11;
+    string model = 13;
+    bool use_enhanced = 14;
+    NLPEncoding use_nlp = 15;
+    bool use_gpu = 16;
+    bool use_provisional_transcription = 17;
+    RequestType client_type = 18;
+}
+
+message StreamingRecognitionConfig {
+    RecognitionConfig config = 1;
+    bool single_utterance = 2;
+    bool interim_results = 3;
+}
+
+message PackageTracing {
+    string date = 1;
+    int64 timestamp_ms = 2;
+    int64 counter = 3;
+}
+
+message StreamingRecognizeRequest {
+    StreamingRecognitionConfig streaming_config = 1;
+    bytes audio_content = 2;
+    PackageTracing tracing = 3;
+}
+
+message Duration {
+    int64 seconds = 1;
+    int32 nanos = 2;
+}
+
+message WordInfo {
+    Duration start_time = 1;
+    Duration end_time = 2;
+    string word = 3;
+}
+
+message SpeechRecognitionAlternative {
+    string transcript = 1;
+    float confidence = 2;
+    repeated WordInfo words = 3;
+    string timestamp = 4;
+    string transcript_aux = 5;
+    string id = 6;
+    string timestamp_ini = 7;
+}
+
+message AudioClassifier {
+    float speech = 1;
+    float noise = 2;
+    float music = 3;
+}
+
+message StreamingRecognitionResult {
+    repeated SpeechRecognitionAlternative alternatives = 1;
+    bool is_final = 2;
+    float stability =3;
+    Duration result_end_time = 4;
+    int32 channel_tag = 5;
+    AudioClassifier audioclass = 6;
+}
+
+enum SpeechEventType {
+    SPEECH_EVENT_UNSPECIFIED  = 0;
+    END_OF_SINGLE_UTTERANCE = 1;
+}
+
+message Status {
+    int32 code = 1;
+    string message = 2;
+}
+
+message StreamingRecognizeResponse {
+    Status error = 1;
+    repeated StreamingRecognitionResult results = 2;
+    SpeechEventType speech_event_type = 3;
+    bool processing_speech = 4;
+}
+
+message ReloadRequest {
+    string request = 1;
+}
+
+message ReloadResponse {
+    string response = 1;
+}
+
+message LoadResponse {
+    float load = 1;
+}
+
+message Languages {
+    repeated string languages = 1;
+}
+
+
+service Speech {
+    // Reload configutation
+    rpc Reload(ReloadRequest) returns (ReloadResponse) {}
+    // List available languages
+    rpc ListLanguages(Empty) returns (Languages) {}
+    // Requests and Responses should always match the rpc name.
+    // rpc NAME(NAMERequest) returns (NAMEResponse);
+    // In this case it is NAME is StreamingRecognize 
+    rpc StreamingRecognize(stream StreamingRecognizeRequest) returns (stream StreamingRecognizeResponse) {}
+    // Get status
+    rpc GetServerStatus(Empty) returns (Empty) {}
+    // Get load
+    rpc GetLoad(Empty) returns (LoadResponse) {}
+}
